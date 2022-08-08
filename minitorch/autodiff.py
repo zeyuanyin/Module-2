@@ -190,7 +190,14 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        raise NotImplementedError('Need to include this file from past assignment.')
+
+        if self.last_fn is None:
+            return d_output
+
+        return self.last_fn.backward(self.ctx, d_output)
+
+        # # TODO: Implement for Task 1.4.
+        # raise NotImplementedError('Need to implement for Task 1.4')
 
 
 class FunctionBase:
@@ -272,7 +279,19 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        raise NotImplementedError('Need to include this file from past assignment.')
+
+        res = []
+
+        vals = cls.backward(ctx, d_output)
+        if isinstance(vals, tuple):
+            for i, v in enumerate(vals):
+                if not is_constant(inputs[i]):
+                    res.append((inputs[i], v))
+        else:
+            if not is_constant(inputs[0]):
+                res.append((inputs[0], vals))
+
+        return res
 
 
 # Algorithms for backpropagation
@@ -293,7 +312,22 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    raise NotImplementedError('Need to include this file from past assignment.')
+
+    ls = [variable]
+
+    if not is_constant(variable) and not variable.is_leaf():
+        for v in variable.history.inputs:
+            if not is_constant(v):
+                # ls.append(v)
+
+                # ls_v = topological_sort(v)
+                # for v_ in ls_v:
+                #     if v_ not in ls:
+                #         ls.append(v_)
+
+                ls.extend(topological_sort(v))  # need repeat  accumulate d
+
+    return ls
 
 
 def backpropagate(variable, deriv):
@@ -309,4 +343,26 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError('Need to include this file from past assignment.')
+
+    order = topological_sort(variable)
+
+    deriv_list = dict()
+
+    for v in order:
+        if v.is_leaf():
+            v.accumulate_derivative(deriv_list[v.unique_id])
+        else:
+
+            if len(deriv_list) == 0:  # right-most/init
+                # ls_d_output=v.history.backprop_step(deriv)
+                back = v.history.last_fn.chain_rule(
+                    v.history.ctx, v.history.inputs, deriv
+                )
+
+            else:
+                back = v.history.last_fn.chain_rule(
+                    v.history.ctx, v.history.inputs, deriv_list[v.unique_id]
+                )
+
+            for v_, d_ in back:
+                deriv_list[v_.unique_id] = d_

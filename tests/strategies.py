@@ -43,6 +43,7 @@ def tensor_data(draw, numbers=floats(), shape=None):
     reverse_permute = [a[0] for a in sorted(enumerate(permute), key=lambda a: a[1])]
     td = minitorch.TensorData(data, permute_shape)
     ret = td.permute(*reverse_permute)
+    # print("2 shape:",ret.shape,shape)
     assert ret.shape[0] == shape[0]
     return ret
 
